@@ -1,7 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ImageBackground } from "react-native";
 import * as Permissions from "expo-permissions";
 import { BarCodeScanner } from "expo-barcode-scanner";
+var bgImg = require("../assets/background2.png");
+var imgIcon = require("../assets/appIcon.png");
+var appName = require("../assets/appName.png");
+
 
 export default class Transaction extends React.Component {
     constructor(props) {
@@ -11,6 +15,8 @@ export default class Transaction extends React.Component {
             scanned: false,
             hasCameraPermissions: null,
             scannedData: "",
+            bookId: "",
+            studentId: "",
         }
     }
     getCameraPermissions = async (domState) => {
@@ -29,8 +35,8 @@ export default class Transaction extends React.Component {
         })
     }
     render() {
-        const { domState, hasCameraPermissions, scanned, scannedData } = this.state
-        if (domState == 'scanner') {
+        const { domState, hasCameraPermissions, scanned, scannedData, bookId, studentId } = this.state
+        if (domState !== 'normal') {
             return (
                 <BarCodeScanner
                     onBarCodeScanned={scanned ? undefined : this.handleBarcodeScanned}
@@ -40,14 +46,39 @@ export default class Transaction extends React.Component {
         }
         return (
             <View style={styles.container}>
-                <Text style={styles.buttonText}>
-                    {hasCameraPermissions ? scannedData : "Dê permissão para acessar a câmera!!"}
-                </Text>
-                <TouchableOpacity onPress={() => this.getCameraPermissions("scanner")} style={styles.button}>
-                    <Text>Digitalizar</Text>
-                </TouchableOpacity>
+                <ImageBackground source = {bgImg} style = {styles.bgImg}>
 
+                    <View style={styles.lowerContainer}>
+                        <View style={styles.textinputContainer}>
+                            <TextInput style={styles.textinput}
+                                placeholder = {"ID livro"}
+                                placeholderTextColor = {"#FFF"}
+                                value = {bookId}>
+                            </TextInput>
+                            <TouchableOpacity onPress={() => this.getCameraPermissions("bookId")}
+                                style={styles.scanbutton}>
+                                <Text style={styles.scanbuttonText}>
+                                    Scan
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.textinputContainer}>
+                            <TextInput style={styles.textinput}
+                                placeholder = {"ID estudante"}
+                                placeholderTextColor = {"#FFF"}
+                                value = {studentId}>
+                            </TextInput>
+                            <TouchableOpacity onPress={() => this.getCameraPermissions("studentId")}
+                                style={styles.scanbutton}>
+                                <Text style={styles.scanbuttonText}>
+                                    Scan
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </ImageBackground>
             </View>
+
         )
     }
 }
@@ -55,25 +86,61 @@ export default class Transaction extends React.Component {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: "#FFFFFF"
+    },
+    bgImg: {
+        flex: 1,
+        resizeMode: "cover",
+        justifyContent: "center"
+    },
+    upperContainer: {
+        flex: 0.5,
         justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#5653D4"
+        alignItems: "center"
     },
-    text: {
-        color: "#ffff",
-        fontSize: 15
+    appIcon: {
+        width: 200,
+        height: 200,
+        resizeMode: "contain",
+        marginTop: 80
     },
-    button: {
-        width: "43%",
-        height: 55,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#F48D20",
-        borderRadius: 15
+    appName: {
+        width: 180,
+        resizeMode: "contain"
     },
-    buttonText: {
-        fontSize: 15,
+    lowerContainer: {
+        flex: 0.5,
+        alignItems: "center"
+    },
+    textinputContainer: {
+        borderWidth: 2,
+        borderRadius: 10,
+        flexDirection: "row",
+        backgroundColor: "#9DFD24",
+        borderColor: "#FFFFFF"
+    },
+    textinput: {
+        width: "57%",
+        height: 50,
+        padding: 10,
+        borderColor: "#FFFFFF",
+        borderRadius: 10,
+        borderWidth: 3,
+        fontSize: 18,
+        backgroundColor: "#5653D4",
         color: "#FFFFFF"
-    }
-
+    },
+    scanbutton: {
+        width: 100,
+        height: 50,
+        backgroundColor: "#9DFD24",
+        borderTopRightRadius: 10,
+        borderBottomRightRadius: 10,
+        justifyContent: "center",
+        alignItems: "center"
+    },
+    scanbuttonText: {
+        fontSize: 20,
+        color: "#0A0101",
+    } 
 });
