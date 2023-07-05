@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ImageBackground } from "react-native";
 import * as Permissions from "expo-permissions";
 import { BarCodeScanner } from "expo-barcode-scanner";
+import db from "../Config";
 var bgImg = require("../assets/background2.png");
 var imgIcon = require("../assets/appIcon.png");
 var appName = require("../assets/appName.png");
@@ -28,10 +29,25 @@ export default class Transaction extends React.Component {
         })
     }
     handleBarcodeScanned = async ({ type, data }) => {
-        this.setState({
-            scannedData: data,
-            domState: "normal",
-            scanned: true,
+        var {domState} = this.state
+        if(domState== "bookId"){
+            this.setState({
+                bookId: data,
+                domState: "normal",
+                scanned: true,
+            })
+        }else if(domState== "studentId"){
+            this.setState({
+                studentId: data,
+                domState: "normal",
+                scanned: true,
+            })
+        }
+    }
+    handleTransactions=()=>{
+        var {bookId} = this.state
+        db.collection("Books").doc(bookId).get().then((doc)=>{
+            console.log(doc.data())
         })
     }
     render() {
@@ -46,7 +62,7 @@ export default class Transaction extends React.Component {
         }
         return (
             <View style={styles.container}>
-                <ImageBackground source = {bgImg} style = {styles.bgImg}>
+                <ImageBackground source = {bgImg} style = {styles.bgImage}>
 
                     <View style={styles.lowerContainer}>
                         <View style={styles.textinputContainer}>
@@ -75,6 +91,9 @@ export default class Transaction extends React.Component {
                                 </Text>
                             </TouchableOpacity>
                         </View>
+                        <TouchableOpacity style= {styles.button} onPress = {()=> this.handleTransactions()}>
+                            <Text style= {styles.buttonText}>Enviar</Text>
+                        </TouchableOpacity>
                     </View>
                 </ImageBackground>
             </View>
@@ -85,62 +104,74 @@ export default class Transaction extends React.Component {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: "#FFFFFF"
+      flex: 1,
+      backgroundColor: "#FFFFFF"
     },
-    bgImg: {
-        flex: 1,
-        resizeMode: "cover",
-        justifyContent: "center"
+    bgImage: {
+      flex: 1,
+      resizeMode: "cover",
+      justifyContent: "center"
     },
     upperContainer: {
-        flex: 0.5,
-        justifyContent: "center",
-        alignItems: "center"
+      flex: 0.5,
+      justifyContent: "center",
+      alignItems: "center"
     },
     appIcon: {
-        width: 200,
-        height: 200,
-        resizeMode: "contain",
-        marginTop: 80
+      width: 200,
+      height: 200,
+      resizeMode: "contain",
+      marginTop: 80
     },
     appName: {
-        width: 180,
-        resizeMode: "contain"
+      width: 180,
+      resizeMode: "contain"
     },
     lowerContainer: {
-        flex: 0.5,
-        alignItems: "center"
+      flex: 0.5,
+      alignItems: "center"
     },
     textinputContainer: {
-        borderWidth: 2,
-        borderRadius: 10,
-        flexDirection: "row",
-        backgroundColor: "#9DFD24",
-        borderColor: "#FFFFFF"
+      borderWidth: 2,
+      borderRadius: 10,
+      flexDirection: "row",
+      backgroundColor: "#9DFD24",
+      borderColor: "#FFFFFF"
     },
     textinput: {
-        width: "57%",
-        height: 50,
-        padding: 10,
-        borderColor: "#FFFFFF",
-        borderRadius: 10,
-        borderWidth: 3,
-        fontSize: 18,
-        backgroundColor: "#5653D4",
-        color: "#FFFFFF"
+      width: "57%",
+      height: 50,
+      padding: 10,
+      borderColor: "#FFFFFF",
+      borderRadius: 10,
+      borderWidth: 3,
+      fontSize: 18,
+      backgroundColor: "#5653D4",
+      color: "#FFFFFF"
     },
     scanbutton: {
-        width: 100,
-        height: 50,
-        backgroundColor: "#9DFD24",
-        borderTopRightRadius: 10,
-        borderBottomRightRadius: 10,
-        justifyContent: "center",
-        alignItems: "center"
+      width: 100,
+      height: 50,
+      backgroundColor: "#9DFD24",
+      borderTopRightRadius: 10,
+      borderBottomRightRadius: 10,
+      justifyContent: "center",
+      alignItems: "center"
     },
     scanbuttonText: {
-        fontSize: 20,
-        color: "#0A0101",
-    } 
-});
+      fontSize: 20,
+      color: "#0A0101",
+    },
+    button: {
+      width: "43%",
+      height: 55,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "#F48D20",
+      borderRadius: 15
+    },
+    buttonText: {
+      fontSize: 24,
+      color: "#FFFFFF",
+    }
+  });
