@@ -1,11 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ImageBackground, ToastAndroid, Alert, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ImageBackground, ToastAndroid, Alert, Platform, KeyboardAvoidingView } from "react-native";
 import * as Permissions from "expo-permissions";
 import { BarCodeScanner } from "expo-barcode-scanner";
 import db from "../Config";
 import firebase from "firebase";
 var bgImg = require("../assets/background2.png");
-var imgIcon = require("../assets/appIcon.png");
+var appIcon = require("../assets/appIcon.png");
 var appName = require("../assets/appName.png");
 
 
@@ -54,34 +54,41 @@ export default class Transaction extends React.Component {
         bookId = bookId.trim().toLowerCase();
         await this.getBookDetails(bookId);
         await this.getStudentDetails(studentId);
-        db.collection("Books")
-            .doc(bookId)
-            .get()
-            .then((doc) => {
-                console.log(doc.data())
-                var book = doc.data()
-                var { bookName, studentName } = this.state
-                if (book.is_book_available) {
-                    this.initiateBookIssue(bookId, studentId, bookName, studentName)
-                    if (Platform.OS == "android") {
-                        ToastAndroid.show("Livro retirado com sucesso!!", ToastAndroid.SHORT)
-                    } else {
-                        Alert.alert("LIvro retirado com sucesso!!")
-                    }
-                } else {
-                    this.initiateBookReturn(bookId, studentId, bookName, studentName)
-                    if (Platform.OS == "android") {
-                        ToastAndroid.show("Livro devolvido com sucesso!!", ToastAndroid.SHORT)
-                    } else {
-                        Alert.alert("LIvro devolvido com sucesso!!")
-                    }
-                }
-
+        var transactionType = await this.checkBookAvailability(bookId)
+        var { bookName, studentName } = this.state
+        if(!transactionType){
+            if (Platform.OS == "android") {
+                ToastAndroid.show("Livro não encontrado!!", ToastAndroid.SHORT)
+            } else {
+                Alert.alert("Livro não encontrado!!")
+            }
+            this.setState({
+                bookId: "",
+                studentId: "",
             })
+        }
+        else if (transactionType == "issue") {
+            this.initiateBookIssue(bookId, studentId, bookName, studentName)
+            if (Platform.OS == "android") {
+                ToastAndroid.show("Livro retirado com sucesso!!", ToastAndroid.SHORT)
+            } else {
+                Alert.alert("LIvro retirado com sucesso!!")
+            }
+        } else if(transactionType == "return") {
+            this.initiateBookReturn(bookId, studentId, bookName, studentName)
+            if (Platform.OS == "android") {
+                ToastAndroid.show("Livro devolvido com sucesso!!", ToastAndroid.SHORT)
+            } else {
+                Alert.alert("Livro devolvido com sucesso!!")
+            }
+        }
+
+
+
     }
 
     getBookDetails = (bookId) => {
-        db.collection("books")
+        db.collection("Books")
             .where("book_id", "==", bookId)
             .get()
             .then(snapshot => {
@@ -94,7 +101,7 @@ export default class Transaction extends React.Component {
     }
 
     getStudentDetails = studentId => {
-        db.collection("students")
+        db.collection("Students")
             .where("student_id", "==", studentId)
             .get()
             .then(snapshot => {
@@ -108,7 +115,7 @@ export default class Transaction extends React.Component {
 
     initiateBookIssue = (bookId, studentId, bookName, studentName) => {
         //adicionando transação
-        db.collection("transactions").add({
+        db.collection("Transactions").add({
             student_id: studentId,
             student_name: studentName,
             book_id: bookId,
@@ -117,13 +124,13 @@ export default class Transaction extends React.Component {
             transaction_type: "issue"
         })
         //alterar status do livro
-        db.collection("books")
+        db.collection("Books")
             .doc(bookId)
             .update({
                 is_book_available: false,
             })
         //alterar número de livros retirados pelo aluno
-        db.collection("students")
+        db.collection("Students")
             .doc(studentId)
             .update({
                 number_of_books_issued: firebase.firestore.FieldValue.increment(1)
@@ -137,7 +144,7 @@ export default class Transaction extends React.Component {
 
     initiateBookReturn = async (bookId, studentId, bookName, studentName) => {
         //adicionar uma transação
-        db.collection("transactions").add({
+        db.collection("Transactions").add({
             student_id: studentId,
             student_name: studentName,
             book_id: bookId,
@@ -146,13 +153,13 @@ export default class Transaction extends React.Component {
             transaction_type: "return"
         });
         //alterar status do livro
-        db.collection("books")
+        db.collection("Books")
             .doc(bookId)
             .update({
                 is_book_available: true
             });
         //alterar o número de livros retirados pelo aluno
-        db.collection("students")
+        db.collection("Students")
             .doc(studentId)
             .update({
                 number_of_books_issued: firebase.firestore.FieldValue.increment(-1)
@@ -164,6 +171,21 @@ export default class Transaction extends React.Component {
             studentId: ""
         });
     };
+
+    checkBookAvailability = async (bookId) => {
+        var bookRef = await db.collection("Books")
+            .where('book_id', "==", bookId).get()
+
+        var transactionType = ""
+        if (bookRef.docs.length == 0) {
+            transactionType = false
+        } else {
+            bookRef.docs.map(doc => {
+                transactionType = doc.data().is_book_available ? "issue" : "return"
+            })
+        }
+        return transactionType
+    }
 
     render() {
         const { domState, hasCameraPermissions, scanned, scannedData, bookId, studentId } = this.state
@@ -177,16 +199,19 @@ export default class Transaction extends React.Component {
         }
 
         return (
-            <View style={styles.container}>
+            <KeyboardAvoidingView behavior="padding" style={styles.container}>
                 <ImageBackground source={bgImg} style={styles.bgImage}>
-
+                    <View style={styles.upperContainer}>
+                        <Image source={appIcon} style={styles.appIcon} />
+                        <Image source={appName} style={styles.appName} />
+                    </View>
                     <View style={styles.lowerContainer}>
                         <View style={styles.textinputContainer}>
                             <TextInput style={styles.textinput}
                                 placeholder={"ID livro"}
                                 placeholderTextColor={"#FFF"}
                                 value={bookId}
-                                onChangeText={text=>{
+                                onChangeText={text => {
                                     this.setState({
                                         bookId: text,
                                     })
@@ -204,7 +229,7 @@ export default class Transaction extends React.Component {
                                 placeholder={"ID estudante"}
                                 placeholderTextColor={"#FFF"}
                                 value={studentId}
-                                onChangeText={text=>{
+                                onChangeText={text => {
                                     this.setState({
                                         studentId: text,
                                     })
@@ -222,7 +247,7 @@ export default class Transaction extends React.Component {
                         </TouchableOpacity>
                     </View>
                 </ImageBackground>
-            </View>
+            </KeyboardAvoidingView>
 
         )
     }
