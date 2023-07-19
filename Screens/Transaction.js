@@ -56,7 +56,7 @@ export default class Transaction extends React.Component {
         await this.getStudentDetails(studentId);
         var transactionType = await this.checkBookAvailability(bookId)
         var { bookName, studentName } = this.state
-        if(!transactionType){
+        if (!transactionType) {
             if (Platform.OS == "android") {
                 ToastAndroid.show("Livro não encontrado!!", ToastAndroid.SHORT)
             } else {
@@ -68,24 +68,30 @@ export default class Transaction extends React.Component {
             })
         }
         else if (transactionType == "issue") {
-            this.initiateBookIssue(bookId, studentId, bookName, studentName)
-            if (Platform.OS == "android") {
-                ToastAndroid.show("Livro retirado com sucesso!!", ToastAndroid.SHORT)
-            } else {
-                Alert.alert("LIvro retirado com sucesso!!")
+            var isElegible = await this.checkStudentEligibilityForBookIssue(studentId)
+            if (isElegible) {
+                this.initiateBookIssue(bookId, studentId, bookName, studentName)
+                if (Platform.OS == "android") {
+                    ToastAndroid.show("Livro retirado com sucesso!!", ToastAndroid.SHORT)
+                } else {
+                    Alert.alert("LIvro retirado com sucesso!!")
+                }
             }
-        } else if(transactionType == "return") {
-            this.initiateBookReturn(bookId, studentId, bookName, studentName)
-            if (Platform.OS == "android") {
-                ToastAndroid.show("Livro devolvido com sucesso!!", ToastAndroid.SHORT)
-            } else {
-                Alert.alert("Livro devolvido com sucesso!!")
+        } else if (transactionType == "return") {
+            var isElegible = await this.checkStudentEligibilityForBookReturn(bookId, studentId)
+            if (isElegible) {
+                this.initiateBookReturn(bookId, studentId, bookName, studentName)
+                if (Platform.OS == "android") {
+                    ToastAndroid.show("Livro devolvido com sucesso!!", ToastAndroid.SHORT)
+                } else {
+                    Alert.alert("Livro devolvido com sucesso!!")
+                }
             }
         }
 
 
 
-    }
+    };
 
     getBookDetails = (bookId) => {
         db.collection("Books")
@@ -98,7 +104,7 @@ export default class Transaction extends React.Component {
                     })
                 })
             })
-    }
+    };
 
     getStudentDetails = studentId => {
         db.collection("Students")
@@ -140,7 +146,7 @@ export default class Transaction extends React.Component {
             bookId: "",
             studentId: ""
         })
-    }
+    };
 
     initiateBookReturn = async (bookId, studentId, bookName, studentName) => {
         //adicionar uma transação
@@ -185,6 +191,72 @@ export default class Transaction extends React.Component {
             })
         }
         return transactionType
+    };
+
+    checkStudentEligibilityForBookIssue = async (studentId) => {
+        var studentRef = await db.collection("Students")
+            .where("student_id", "==", studentId).get()
+
+        var isStudentElegible = ""
+        if (studentRef.docs.length == 0) {
+            this.setState({
+                bookId: "",
+                studentId: ""
+            });
+            isStudentElegible = false
+
+            if (Platform.OS == "android") {
+                ToastAndroid.show("Estudante não encontrado!!", ToastAndroid.SHORT)
+            } else {
+                Alert.alert("Estudante não encontrado!!")
+            }
+
+        } else {
+            studentRef.docs.map(doc => {
+                if (doc.data().number_of_books_issued < 2) {
+                    isStudentElegible = true
+                    if (studentRef.docs.lemgth == 0) {
+                        this.setState({
+                            bookId: "",
+                            studentId: ""
+                        });
+                    } else {
+                        isStudentElegible = false
+                        this.setState({
+                            bookId: "",
+                            studentId: "",
+                        })
+                        if (Platform.OS == "android") {
+                            ToastAndroid.show("Estudante já retirou dois livros!!", ToastAndroid.SHORT)
+                        } else {
+                            Alert.alert("Estudante já retirou dois livros!!")
+                        }
+                    }}
+                })
+        }
+        return isStudentElegible
+    };
+
+    checkStudentEligibilityForBookReturn = async (bookId, studentId) => {
+        var transactionRef = await db.collection("Transactions")
+            .where("book_id", "==", bookId).limit(1).get()
+
+        var isStudentElegible = ""
+
+        transactionRef.docs.map(doc => {
+            var lastBookTransaction = doc.data()
+            if (lastBookTransaction.student_id == studentId) {
+                isStudentElegible = true
+            } else {
+                isStudentElegible = false
+                this.setState({
+                    bookId: "",
+                    studentId: ""
+                })
+                Alert.alert("Livro não foi retirado por este aluno")
+            }
+        })
+        return isStudentElegible
     }
 
     render() {
@@ -250,7 +322,7 @@ export default class Transaction extends React.Component {
             </KeyboardAvoidingView>
 
         )
-    }
+    };
 }
 
 const styles = StyleSheet.create({
